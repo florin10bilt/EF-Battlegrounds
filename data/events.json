@@ -1,0 +1,214 @@
+[
+  {
+    "ts": 1774978384.5172827,
+    "type": "capture_start",
+    "starId": "30016516",
+    "starName": "UGD-0KB",
+    "constellationId": 20001149,
+    "faction": 2,
+    "actor": "0x36186c",
+    "actorName": "Sol",
+    "endsAt": 1774979584.5172827,
+    "token": "0b5cec12b36b4adda1a9fdd9"
+  },
+  {
+    "ts": 1774978383.556654,
+    "type": "capture_cancel",
+    "starId": "30016516",
+    "starName": "UGD-0KB",
+    "actor": "0x36186c",
+    "token": "0b5cec12b36b4adda1a9fdd9"
+  },
+  {
+    "ts": 1774977645.9540932,
+    "type": "anchor",
+    "starId": "30016454",
+    "faction": 2,
+    "iconId": 1,
+    "actor": "DEV"
+  },
+  {
+    "ts": 1774977279.6785955,
+    "type": "capture_start",
+    "starId": "30016516",
+    "starName": "UGD-0KB",
+    "constellationId": 20001149,
+    "faction": 2,
+    "actor": "0x36186c",
+    "actorName": "Sol",
+    "endsAt": 1774978479.6785955,
+    "token": "0b5cec12b36b4adda1a9fdd9"
+  },
+  {
+    "ts": 1774976951.7920527,
+    "type": "capture",
+    "starId": "30016470",
+    "faction": 1,
+    "actor": "DEV",
+    "starName": "ISJ-M3D"
+  },
+  {
+    "ts": 1774976513.1758838,
+    "type": "capture_cancel",
+    "starId": "30015660",
+    "starName": "IJ2-KT8",
+    "actor": "0x36186c",
+    "token": "68239868ddacc5989192b644"
+  },
+  {
+    "ts": 1774976187.012871,
+    "type": "capture_start",
+    "starId": "30015660",
+    "starName": "IJ2-KT8",
+    "constellationId": 20001090,
+    "faction": null,
+    "actor": "0x36186c",
+    "actorName": "Sol",
+    "endsAt": 1774977387.012871,
+    "token": "68239868ddacc5989192b644"
+  },
+  {
+    "ts": 1774976172.493529,
+    "type": "anchor",
+    "starId": "30015660",
+    "faction": 0,
+    "iconId": 1,
+    "actor": "DEV"
+  },
+  {
+    "ts": 1774976038.553618,
+    "type": "capture",
+    "starId": "30016516",
+    "starName": "UGD-0KB",
+    "faction": 1,
+    "actor": "0x36186c",
+    "actorName": "Sol",
+    "token": "0b5cec12b36b4adda1a9fdd9"
+  },
+  {
+    "ts": 1774973473.8591661,
+    "type": "capture_start",
+    "starId": "30016516",
+    "starName": "UGD-0KB",
+    "constellationId": 20001149,
+    "faction": 2,
+    "actor": "0x36186c",
+    "actorName": "Sol",
+    "endsAt": 1774974673.8591661,
+    "token": "0b5cec12b36b4adda1a9fdd9"
+  },
+  {
+    "ts": 1774973452.1837788,
+    "type": "anchor",
+    "starId": "30016516",
+    "faction": 2,
+    "iconId": 1,
+    "actor": "DEV"
+  },
+  {
+    "ts": 1774972464.6564174,
+    "type": "capture_cancel",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "actor": "0x36186c",
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774972025.9847326,
+    "type": "capture_start",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "constellationId": 20000939,
+    "faction": null,
+    "actor": "0x36186c",
+    "endsAt": 1774973225.9847326,
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774971969.9005666,
+    "type": "capture_cancel",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "actor": "0x36186c",
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774971948.6290627,
+    "type": "capture_start",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "constellationId": 20000939,
+    "faction": null,
+    "actor": "0x36186c",
+    "endsAt": 1774973148.6290627,
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774971941.9492981,
+    "type": "capture_cancel",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "actor": "0x36186c",
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774971885.8290083,
+    "type": "capture_start",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "constellationId": 20000939,
+    "faction": null,
+    "actor": "0x36186c",
+    "endsAt": 1774973085.8290083,
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774971870.5457163,
+    "type": "capture_cancel",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "actor": "0x36186c",
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774971396.7060575,
+    "type": "capture_start",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "constellationId": 20000939,
+    "faction": null,
+    "actor": "0x36186c",
+    "endsAt": 1774972596.7060575,
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774970094.7404861,
+    "type": "capture_cancel",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "actor": "PILOT",
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774970093.6720557,
+    "type": "capture_start",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "constellationId": 20000939,
+    "faction": null,
+    "actor": "PILOT",
+    "endsAt": 1774971293.6720557,
+    "token": "a6f7cee1f7a77048187fa3d2"
+  },
+  {
+    "ts": 1774968641.7196162,
+    "type": "capture_start",
+    "starId": "30013500",
+    "starName": "I4D-82C",
+    "constellationId": 20000939,
+    "faction": null,
+    "actor": "PILOT",
+    "endsAt": 1774969841.7196162,
+    "token": "a6f7cee1f7a77048187fa3d2"
+  }
+]

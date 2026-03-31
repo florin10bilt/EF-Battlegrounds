@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EF BATTLEGROUNDS — CAPTURE INTERFACE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #ff7300;
+      --dim:     #996600;
+      --bg:      #000000;
+      --danger:  #ff3300;
+      --safe:    #00ff9c;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--primary);
+      font-family: 'VT323', monospace;
+      font-size: 16px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .panel {
+      border: 1px solid var(--primary);
+      width: 100%;
+      max-width: 480px;
+      padding: 20px 24px;
+    }
+
+    .panel-title {
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--primary);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .row .label { color: var(--dim); }
+    .row .value { color: var(--primary); }
+
+    .divider {
+      border-top: 1px solid var(--primary);
+      margin: 14px 0;
+    }
+
+    /* Auth */
+    #auth-section { margin-bottom: 14px; }
+
+    #connect-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      font-family: 'VT323', monospace;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border: none;
+      background: var(--primary);
+      color: #000;
+      margin-bottom: 4px;
+    }
+
+    #connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #wallet-status {
+      font-size: 13px;
+      color: var(--dim);
+      text-align: center;
+      min-height: 16px;
+    }
+
+    #auth-connected {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--primary);
+      padding: 6px 10px;
+    }
+
+    #auth-connected .char-name { flex: 1; font-size: 15px; }
+    #auth-connected .faction-badge { font-size: 14px; }
+
+    #disconnect-btn {
+      background: transparent;
+      color: var(--dim);
+      border: 1px solid var(--dim);
+      font-family: 'VT323', monospace;
+      font-size: 12px;
+      padding: 1px 6px;
+      cursor: pointer;
+    }
+
+    /* Timer */
+    #timer-block { display: none; margin-bottom: 16px; }
+
+    #timer-display {
+      font-size: 48px;
+      letter-spacing: 0.1em;
+      text-align: center;
+      color: var(--danger);
+      padding: 10px 0;
+      border: 1px solid var(--danger);
+      margin-bottom: 8px;
+    }
+
+    #timer-display.ending { animation: blink 0.6s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0.2; } }
+
+    #timer-label {
+      text-align: center;
+      color: var(--dim);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    #actor-line {
+      text-align: center;
+      font-size: 15px;
+      color: var(--primary);
+    }
+
+    /* Progress bar */
+    #progress-bar-wrap {
+      border: 1px solid var(--danger);
+      height: 8px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    #progress-bar-fill {
+      height: 100%;
+      background: var(--danger);
+      width: 0%;
+      transition: width 1s linear;
+    }
+
+    /* Buttons */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      font-family: 'VT323', monospace;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border: 1px solid var(--primary);
+      background: var(--primary);
+      color: #000;
+      margin-bottom: 8px;
+    }
+
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn.secondary {
+      background: transparent;
+      color: var(--dim);
+      border-color: var(--dim);
+    }
+
+    .btn.danger {
+      background: transparent;
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    /* Status */
+    #status-line {
+      text-align: center;
+      font-size: 13px;
+      color: var(--dim);
+      min-height: 18px;
+      margin-top: 8px;
+    }
+
+    #error-line {
+      text-align: center;
+      font-size: 13px;
+      color: var(--danger);
+      min-height: 18px;
+    }
+
+    /* Not found */
+    #not-found { text-align: center; display: none; }
+    #not-found .code { font-size: 40px; color: var(--danger); margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="panel">
+  <div id="not-found">
+    <div class="code">404</div>
+    <div>TURRET NOT REGISTERED</div>
+  </div>
+
+  <div id="main-ui">
+    <div class="panel-title">+--[ CAPTURE INTERFACE ]</div>
+
+    <div class="row"><span class="label">SYSTEM:</span>     <span class="value" id="star-name">—</span></div>
+    <div class="row"><span class="label">SYSTEM ID:</span>  <span class="value" id="star-id">—</span></div>
+    <div class="row"><span class="label">CONST ID:</span>   <span class="value" id="const-id">—</span></div>
+    <div class="row"><span class="label">FACTION:</span>    <span class="value" id="faction-val">—</span></div>
+
+    <div class="divider"></div>
+
+    <!-- Auth section -->
+    <div id="auth-section">
+      <button id="connect-btn">[ CONNECT WALLET TO CAPTURE ]</button>
+      <div id="wallet-status">AUTHENTICATION REQUIRED</div>
+      <div id="auth-connected">
+        <div id="faction-square" style="font-size:20px"></div>
+        <div class="char-name" id="char-name-display">PILOT</div>
+        <div class="faction-badge" id="faction-display">—</div>
+        <button id="disconnect-btn">[X]</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="timer-block">
+      <div id="timer-label">CAPTURE IN PROGRESS — TIME REMAINING</div>
+      <div id="timer-display">20:00</div>
+      <div id="progress-bar-wrap"><div id="progress-bar-fill"></div></div>
+      <div id="actor-line">BY: —</div>
+    </div>
+
+    <button class="btn" id="capture-btn" disabled>[ INITIATE CAPTURE ]</button>
+    <button class="btn danger" id="cancel-btn" style="display:none">[ CANCEL CAPTURE ]</button>
+    <button class="btn secondary" id="contest-btn" style="display:none">[ CONTEST +5 MIN ]</button>
+
+    <div id="status-line">AWAITING AUTHENTICATION</div>
+    <div id="error-line"></div>
+  </div>
+</div>
+
+<script type="module">
+  const token = location.pathname.split('/').pop();
+  const FACTION_COLORS = { 1: '#ff5900', 2: '#5be6ff' };
+
+  let turretData = null;
+  let activeCapture = null; // { endsAt, actor, walletAddress, isOwn, isContestable }
+  let timerInterval = null;
+  let walletAddress = null;
+  let charRecord = null;
+  let activeWalletObj = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  function setStatus(msg) { $('status-line').textContent = msg; }
+  function setError(msg)  {
+    $('error-line').textContent = msg;
+    setTimeout(() => { $('error-line').textContent = ''; }, 4000);
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // Derive capture duration from startedAt if present, else fallback 1200
+  function getCaptureDuration() {
+    if (!activeCapture) return 1200;
+    return activeCapture.startedAt ? (activeCapture.endsAt - activeCapture.startedAt) : 1200;
+  }
+
+  async function completeCaptureOnServer() {
+    try {
+      const res = await fetch(`/api/turrets/${token}/complete`, { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        setStatus('CAPTURE COMPLETE — OWNERSHIP TRANSFERRED');
+      } else {
+        setError(`COMPLETE ERROR: ${data.reason}`);
+        setStatus('CAPTURE COMPLETE');
+      }
+    } catch (e) {
+      setError('NETWORK ERROR ON COMPLETE');
+    }
+  }
+
+  function updateTimer() {
+    if (!activeCapture) return;
+    const remaining = activeCapture.endsAt - (Date.now() / 1000);
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      $('timer-display').textContent = '00:00';
+      $('timer-display').classList.remove('ending');
+      $('cancel-btn').style.display = 'none';
+      $('contest-btn').style.display = 'none';
+      $('timer-block').style.display = 'none';
+      const wasOwn = activeCapture.isOwn;
+      activeCapture = null;
+      if (wasOwn) completeCaptureOnServer();
+      else setStatus('CAPTURE COMPLETE');
+      updateActionButtons();
+      return;
+    }
+    $('timer-display').textContent = formatTime(remaining);
+    $('timer-display').classList.toggle('ending', remaining < 60);
+    const duration = getCaptureDuration();
+    const pct = ((duration - remaining) / duration) * 100;
+    $('progress-bar-fill').style.width = `${pct}%`;
+  }
+
+  // Decide which action buttons to show based on who is logged in vs who started capture
+  function updateActionButtons() {
+    if (!activeCapture) {
+      // No active capture — show initiate if eligible
+      $('cancel-btn').style.display = 'none';
+      $('contest-btn').style.display = 'none';
+      checkCaptureEligibility();
+      return;
+    }
+    $('capture-btn').disabled = true;
+    $('capture-btn').style.display = 'block';
+
+    const isOwner = walletAddress && activeCapture.walletAddress === walletAddress;
+    const isContestable = walletAddress && !isOwner && activeCapture.isContestable;
+
+    // Cancel only for the initiator
+    $('cancel-btn').style.display = isOwner ? 'block' : 'none';
+    $('cancel-btn').disabled = false;
+
+    // Contest for enemy faction viewers
+    $('contest-btn').style.display = isContestable ? 'block' : 'none';
+    $('contest-btn').disabled = false;
+
+    if (isOwner) setStatus('CAPTURE IN PROGRESS — YOU ARE CAPTURING');
+    else if (isContestable) setStatus('ENEMY CAPTURE IN PROGRESS — CONTEST?');
+    else setStatus('CAPTURE IN PROGRESS');
+  }
+
+  function showActiveCapture(active) {
+    // Determine ownership flags
+    const isOwn = walletAddress != null && active.walletAddress === walletAddress;
+    const captorFaction = active.actorFaction ?? null;
+    const myFaction = charRecord?.faction ?? null;
+    const isContestable = walletAddress != null && !isOwn &&
+      myFaction != null && captorFaction != null && myFaction !== captorFaction;
+
+    activeCapture = { ...active, isOwn, isContestable };
+    $('timer-block').style.display = 'block';
+    const actorLabel = active.actorName ?? active.actor ?? '?';
+    $('actor-line').textContent = `BY: ${actorLabel.toUpperCase()}`;
+    clearInterval(timerInterval);
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+    updateActionButtons();
+  }
+
+  /* ── Auth ── */
+
+  function checkCaptureEligibility() {
+    if (activeCapture) { $('capture-btn').disabled = true; return; }
+    if (!walletAddress) { $('capture-btn').disabled = true; return; }
+
+    const playerFaction = charRecord?.faction;
+    if (!playerFaction) {
+      setStatus('NO FACTION — CANNOT CAPTURE');
+      $('capture-btn').disabled = true;
+      return;
+    }
+    // Note: server does the definitive faction check; show optimistic block here
+    $('capture-btn').disabled = false;
+    setStatus('READY — INITIATE CAPTURE');
+  }
+
+  function renderConnected() {
+    $('connect-btn').style.display = 'none';
+    $('wallet-status').style.display = 'none';
+    $('auth-connected').style.display = 'flex';
+
+    const faction = charRecord?.faction;
+    const factionColor = faction ? (FACTION_COLORS[faction] ?? '#ffffff') : '#888888';
+    $('faction-square').innerHTML = faction
+      ? `<span style="color:${factionColor}">&#9632;</span>` : '—';
+    $('char-name-display').textContent =
+      (charRecord?.characterName ?? walletAddress?.slice(0, 8) ?? 'PILOT').toUpperCase();
+    $('faction-display').textContent = faction ? `FACTION_${faction}` : 'NO FACTION';
+    $('faction-display').style.color = factionColor;
+
+    // Re-evaluate buttons now that we know who this is
+    if (activeCapture) showActiveCapture(activeCapture);
+    else checkCaptureEligibility();
+  }
+
+  async function connectWallet() {
+    try {
+      const { getWallets } = await import('https://esm.sh/@wallet-standard/app@1.0.1');
+      const registry = getWallets();
+      const wallets = registry.get();
+      const wallet = wallets[0];
+      if (!wallet) { setError('NO WALLET FOUND'); return; }
+      const connectFeature = wallet.features['standard:connect'];
+      if (!connectFeature) { setError('WALLET INCOMPATIBLE'); return; }
+      $('connect-btn').textContent = '[ CONNECTING... ]';
+      $('connect-btn').disabled = true;
+      const result = await connectFeature.connect();
+      const account = result.accounts?.[0] ?? wallet.accounts?.[0];
+      if (!account?.address) {
+        setError('CONNECTION REJECTED');
+        $('connect-btn').textContent = '[ CONNECT WALLET TO CAPTURE ]';
+        $('connect-btn').disabled = false;
+        return;
+      }
+      activeWalletObj = wallet;
+      walletAddress = account.address;
+      setStatus('LOADING CHARACTER...');
+      try {
+        const charRes = await fetch(`/api/characters/${walletAddress}`);
+        if (charRes.ok) {
+          const charData = await charRes.json();
+          charRecord = charData.character ?? null;
+        }
+      } catch (_) { /* no stored character */ }
+      renderConnected();
+    } catch (err) {
+      console.warn('Wallet connect failed:', err);
+      setError('CONNECT ERROR');
+      $('connect-btn').textContent = '[ CONNECT WALLET TO CAPTURE ]';
+      $('connect-btn').disabled = false;
+    }
+  }
+
+  function disconnectWallet() {
+    try { activeWalletObj?.features?.['standard:disconnect']?.disconnect?.(); } catch (_) {}
+    activeWalletObj = null;
+    walletAddress = null;
+    charRecord = null;
+    $('connect-btn').style.display = 'block';
+    $('connect-btn').disabled = false;
+    $('connect-btn').textContent = '[ CONNECT WALLET TO CAPTURE ]';
+    $('wallet-status').style.display = 'block';
+    $('auth-connected').style.display = 'none';
+    $('capture-btn').disabled = true;
+    $('cancel-btn').style.display = 'none';
+    $('contest-btn').style.display = 'none';
+    setStatus('AWAITING AUTHENTICATION');
+  }
+
+  $('connect-btn').addEventListener('click', connectWallet);
+  $('disconnect-btn').addEventListener('click', disconnectWallet);
+
+  /* ── Load turret ── */
+  async function load() {
+    const res = await fetch(`/api/turrets/${token}`);
+    if (!res.ok) {
+      $('not-found').style.display = 'block';
+      $('main-ui').style.display = 'none';
+      return;
+    }
+    const data = await res.json();
+    turretData = data.turret;
+
+    $('star-name').textContent   = (turretData.starName ?? '?').toUpperCase();
+    $('star-id').textContent     = turretData.starId ?? '?';
+    $('const-id').textContent    = turretData.constellationId ?? '?';
+    $('faction-val').textContent = turretData.faction != null
+      ? `FACTION_${turretData.faction}` : 'UNASSIGNED';
+
+    if (data.active) {
+      showActiveCapture(data.active);
+    } else {
+      setStatus('AWAITING AUTHENTICATION');
+    }
+  }
+
+  /* ── Action buttons ── */
+
+  $('capture-btn').addEventListener('click', async () => {
+    if (!walletAddress) { setError('WALLET REQUIRED'); return; }
+    $('capture-btn').disabled = true;
+    setStatus('INITIATING...');
+    const actorName = charRecord?.characterName ?? walletAddress.slice(0, 8);
+    try {
+      const res = await fetch(`/api/turrets/${token}/capture`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actor: walletAddress.slice(0, 8),
+          actorName,
+          walletAddress,
+          actorFaction: charRecord?.faction ?? null
+        })
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        const msg = data.reason === 'friendly-faction' ? 'FRIENDLY SYSTEM — CANNOT CAPTURE'
+          : data.reason === 'already-capturing' ? 'ALREADY CAPTURING ANOTHER SITE'
+          : `ERROR: ${data.reason}`;
+        setError(msg);
+        checkCaptureEligibility();
+        return;
+      }
+      showActiveCapture({
+        endsAt: data.endsAt,
+        startedAt: Date.now() / 1000,
+        actor: walletAddress.slice(0, 8),
+        actorName,
+        walletAddress,
+        actorFaction: charRecord?.faction ?? null
+      });
+    } catch (e) {
+      setError('NETWORK ERROR');
+      checkCaptureEligibility();
+    }
+  });
+
+  $('cancel-btn').addEventListener('click', async () => {
+    $('cancel-btn').disabled = true;
+    setStatus('CANCELLING...');
+    try {
+      const res = await fetch(`/api/turrets/${token}/cancel`, { method: 'POST' });
+      const data = await res.json();
+      if (!data.ok) { setError(`ERROR: ${data.reason}`); $('cancel-btn').disabled = false; return; }
+      clearInterval(timerInterval);
+      activeCapture = null;
+      $('timer-block').style.display = 'none';
+      $('cancel-btn').style.display = 'none';
+      $('contest-btn').style.display = 'none';
+      checkCaptureEligibility();
+      setStatus('CAPTURE CANCELLED');
+    } catch (e) {
+      setError('NETWORK ERROR');
+      $('cancel-btn').disabled = false;
+    }
+  });
+
+  $('contest-btn').addEventListener('click', async () => {
+    if (!walletAddress) { setError('WALLET REQUIRED'); return; }
+    $('contest-btn').disabled = true;
+    setStatus('CONTESTING...');
+    const actorName = charRecord?.characterName ?? walletAddress.slice(0, 8);
+    try {
+      const res = await fetch(`/api/turrets/${token}/contest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actor: walletAddress.slice(0, 8),
+          actorName,
+          walletAddress,
+          actorFaction: charRecord?.faction ?? null
+        })
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setError(data.reason === 'same-faction' ? 'SAME FACTION — CANNOT CONTEST' : `ERROR: ${data.reason}`);
+        $('contest-btn').disabled = false;
+        return;
+      }
+      // Update timer with new endsAt
+      activeCapture.endsAt = data.endsAt;
+      setStatus('CONTESTED — +5 MIN ADDED');
+      $('contest-btn').disabled = true; // one contest per session
+    } catch (e) {
+      setError('NETWORK ERROR');
+      $('contest-btn').disabled = false;
+    }
+  });
+
+  load();
+</script>
+</body>
+</html>
