@@ -109,6 +109,8 @@ export function setupCamera(canvas) {
       return vp;
     },
     get distance() { return distance; },
+    get distanceTarget() { return distanceTarget; },
+    set distanceTarget(v) { distanceTarget = v; },
     get theta() { return theta; },
     set theta(t) { theta = t; },
     get thetaTarget() { return thetaTarget; },

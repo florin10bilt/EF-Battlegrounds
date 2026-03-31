@@ -7,6 +7,7 @@ import {
 } from './uiTheme.js';
 import {
   getOwnerId,
+  getIconId,
   getFactionName,
   countSystemsByFaction
 } from './starOwnership.js';
@@ -23,6 +24,8 @@ import {
 
 const PANEL_WIDTH = '240px';
 const FONT_SIZE = '14px';
+
+const DEV_WALLET = '0x36186c31727accc04f45aea50e4dcbec5dee3f4e63616853054992ee5c1c43e6';
 
 const P = 'var(--ui-primary)';
 const D = 'var(--ui-dim)';
@@ -42,6 +45,7 @@ const D = 'var(--ui-dim)';
 
 // Shared active captures cache — updated by left panel poll, read by right panel
 let _activeCapturesCache = {}; // token → entry
+let _refreshSelectedCapture = null; // set by right panel to update capture block live
 
 /* ============================================================================
  * INTERNAL HELPERS
@@ -206,7 +210,7 @@ function makeSplitBar(segments, totalWidth = 22) {
  * LEFT PANEL
  * ========================================================================== */
 
-export function createLeftPanel({ ownership, starData, onStarClick = null }) {
+export function createLeftPanel({ ownership, starData, onStarClick = null, onOwnershipChange = null }) {
   const { content } = makeCollapsiblePanel('left');
 
   /* ── APP_IDENT ─────────────────────────────────────────────────── */
@@ -218,9 +222,9 @@ export function createLeftPanel({ ownership, starData, onStarClick = null }) {
   });
 
   ident.innerHTML = `
-    <div style="font-size:18px;letter-spacing:0.06em;font-family:${UI_FONT};color:${P}">EF BATTLEGROUNDS</div>
-    <div style="color:${D};font-size:${FONT_SIZE};font-family:${UI_FONT}">EVE FRONTIER // TACTICAL MAP SYS</div>
-    <div style="color:${D};font-size:12px;font-family:${UI_FONT}">v0.1 // UPLINK: ACTIVE</div>
+    <div style="font-size:18px;letter-spacing:0.06em;font-family:${UI_FONT};color:${P}">FRONTIER FACTIONAL WARFARE</div>
+    <div style="color:${D};font-size:${FONT_SIZE};font-family:${UI_FONT}">FFW // TERRITORY MAP SYS</div>
+    <div style="color:${D};font-size:12px;font-family:${UI_FONT}">v0.1 ALPHA // HACKATON 2026</div>
   `.trim();
 
   const clockLine = document.createElement('div');
@@ -350,7 +354,7 @@ export function createLeftPanel({ ownership, starData, onStarClick = null }) {
       if (onStarClick) nameEl.addEventListener('click', () => onStarClick(entry.starId));
       const byEl = document.createElement('div');
       byEl.style.cssText = 'color:rgba(0,0,0,0.7);font-size:13px';
-      byEl.textContent = `BY: ${(entry.actorName ?? entry.actor ?? '?').toUpperCase()}`;
+      byEl.textContent = `PLAYER: ${(entry.actorName ?? entry.actor ?? '?').toUpperCase()}`;
       card.appendChild(nameEl);
       card.appendChild(byEl);
       card.appendChild(timerEl);
@@ -507,11 +511,14 @@ export function createLeftPanel({ ownership, starData, onStarClick = null }) {
       if (!res.ok) return;
       const data = await res.json();
       if (!data.events?.length) return;
+      let ownershipDirty = false;
       for (const e of [...data.events].reverse()) {
         const line = buildEventLine(e, onStarClick);
         logBody.prepend(line);
         if (e.ts > _lastEventTs) _lastEventTs = e.ts;
+        if (e.type === 'capture') ownershipDirty = true;
       }
+      if (ownershipDirty && onOwnershipChange) await onOwnershipChange();
       while (logBody.children.length > 100) logBody.removeChild(logBody.lastChild);
     } catch (_) { /* network hiccup, retry next interval */ }
   }
@@ -524,6 +531,8 @@ export function createLeftPanel({ ownership, starData, onStarClick = null }) {
       if (!data.ok) return;
       _activeCapturesCache = data.active ?? {};
       renderActiveCaptureCards(_activeCapturesCache);
+      // Refresh live capture block in selected system panel
+      _refreshSelectedCapture?.();
     } catch (_) { /* network hiccup */ }
   }
 
@@ -553,9 +562,7 @@ export function createRightPanel({
   /* ── AUTH_NODE ─────────────────────────────────────────────────── */
   const { root: authRoot, body: authBody } = makeModule('AUTH_NODE');
 
-  // Fixed height — always the same size regardless of state
   Object.assign(authBody.style, {
-    height: '80px',
     overflow: 'hidden',
     padding: '4px 6px',
     boxSizing: 'border-box',
@@ -575,17 +582,17 @@ export function createRightPanel({
   Object.assign(walletBtn.style, {
     display: 'block',
     width: '100%',
-    height: '100%',
     background: P,
     color: '#000',
-    border: 'none',
+    border: `2px solid ${P}`,
     fontFamily: UI_FONT,
     fontSize: '14px',
-    padding: '0',
+    padding: '18px 0',
     cursor: 'pointer',
-    letterSpacing: '0.06em',
+    letterSpacing: '0.1em',
     fontWeight: 'bold',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    textTransform: 'uppercase'
   });
   walletBtn.textContent = '[ CONNECT WALLET ]';
 
@@ -595,19 +602,16 @@ export function createRightPanel({
   const connectedView = document.createElement('div');
   Object.assign(connectedView.style, {
     display: 'none',
-    height: '100%',
     flexDirection: 'column',
     gap: '4px'
   });
 
-  // Top row: avatar + info
+  // Avatar row: avatar + info + action buttons stacked on the right
   const profileRow = document.createElement('div');
   Object.assign(profileRow.style, {
     display: 'flex',
-    gap: '8px',
-    alignItems: 'flex-start',
-    flex: '1',
-    minHeight: '0'
+    gap: '6px',
+    alignItems: 'stretch'
   });
 
   const avatar = document.createElement('img');
@@ -633,50 +637,46 @@ export function createRightPanel({
   });
   charInfo.innerHTML = `<span style="color:${D}">...</span>`;
 
+  // Action buttons stacked vertically on the right of the avatar block
+  const actionCol = document.createElement('div');
+  Object.assign(actionCol.style, {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '3px',
+    flexShrink: '0',
+    justifyContent: 'flex-start'
+  });
+
+  function makeSmallBtn(label) {
+    const btn = document.createElement('button');
+    Object.assign(btn.style, {
+      background: 'transparent',
+      color: D,
+      border: `1px solid ${D}`,
+      fontFamily: UI_FONT,
+      fontSize: '11px',
+      padding: '2px 5px',
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+      letterSpacing: '0.04em'
+    });
+    btn.textContent = label;
+    return btn;
+  }
+
+  const changeFactionBtn = makeSmallBtn('[FACTION]');
+  const disconnectBtn = makeSmallBtn('[LOGOUT]');
+
+  actionCol.appendChild(changeFactionBtn);
+  actionCol.appendChild(disconnectBtn);
+
   profileRow.appendChild(avatar);
   profileRow.appendChild(charInfo);
+  profileRow.appendChild(actionCol);
 
-  // Bottom row: wallet address + disconnect button
-  const bottomRow = document.createElement('div');
-  Object.assign(bottomRow.style, {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '4px',
-    flexShrink: '0'
-  });
-
-  const walletLabel = document.createElement('div');
-  Object.assign(walletLabel.style, {
-    fontFamily: UI_FONT,
-    fontSize: '13px',
-    color: D,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    flex: '1',
-    minWidth: '0'
-  });
-
-  const disconnectBtn = document.createElement('button');
-  Object.assign(disconnectBtn.style, {
-    background: 'transparent',
-    color: D,
-    border: `1px solid ${D}`,
-    fontFamily: UI_FONT,
-    fontSize: '11px',
-    padding: '1px 5px',
-    cursor: 'pointer',
-    flexShrink: '0',
-    whiteSpace: 'nowrap'
-  });
-  disconnectBtn.textContent = '[X]';
-
-  bottomRow.appendChild(walletLabel);
-  bottomRow.appendChild(disconnectBtn);
+  const walletLabel = document.createElement('div'); // kept for address storage only, not shown
 
   connectedView.appendChild(profileRow);
-  connectedView.appendChild(bottomRow);
 
   // Hidden status line — shown only on connect errors, overlaid below button
   const statusLine = document.createElement('div');
@@ -784,7 +784,7 @@ export function createRightPanel({
     charInfo.innerHTML = `
       <div style="color:${P};font-size:14px;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(record?.characterName ?? '???').toUpperCase()}</div>
       <div style="color:${D};font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(record?.tribeName ?? 'NO TRIBE').toUpperCase()}</div>
-      <div style="color:${P};font-size:12px">${factionSquare} ${factionLabel}</div>
+      <div style="color:${P};font-size:16px;font-weight:bold;letter-spacing:0.05em">${factionSquare} ${factionLabel}</div>
     `.trim();
   }
 
@@ -878,6 +878,47 @@ export function createRightPanel({
     if (factionMessages.style.display !== 'none') setActiveTab(true);
   }
 
+  // ── Change-faction confirmation overlay
+  const confirmOverlay = document.createElement('div');
+  Object.assign(confirmOverlay.style, {
+    position: 'fixed',
+    top: '0', left: '0', right: '0', bottom: '0',
+    background: 'rgba(0,0,0,0.85)',
+    display: 'none',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1999,
+    fontFamily: UI_FONT
+  });
+  confirmOverlay.innerHTML = `
+    <div style="border:1px solid ${P};padding:20px 24px;min-width:280px;background:#000;color:${P};font-family:${UI_FONT}">
+      <div style="font-size:16px;letter-spacing:0.08em;margin-bottom:8px">ARE YOU SURE?</div>
+      <div style="font-size:13px;color:${D};margin-bottom:16px">FACTION CHANGE LOCKS FOR 24H AFTER CHOOSING.</div>
+      <div style="display:flex;gap:8px">
+        <button id="confirm-yes" style="flex:1;padding:6px;background:transparent;border:1px solid ${P};color:${P};font-family:${UI_FONT};font-size:14px;cursor:pointer">[ CONFIRM ]</button>
+        <button id="confirm-no" style="flex:1;padding:6px;background:transparent;border:1px solid ${D};color:${D};font-family:${UI_FONT};font-size:14px;cursor:pointer">[ CANCEL ]</button>
+      </div>
+    </div>
+  `.trim();
+  document.body.appendChild(confirmOverlay);
+
+  confirmOverlay.querySelector('#confirm-no').addEventListener('click', () => {
+    confirmOverlay.style.display = 'none';
+  });
+  confirmOverlay.querySelector('#confirm-yes').addEventListener('click', async () => {
+    confirmOverlay.style.display = 'none';
+    const chosen = await showFactionPopup(_charRecord?.faction ?? null, _charRecord?.factionSetAt ?? null);
+    if (chosen && _charRecord) {
+      _charRecord.faction = chosen;
+      _charRecord = await saveCharacter(_walletAddress, _charRecord) ?? _charRecord;
+      renderCharInfo(_charRecord);
+    }
+  });
+
+  changeFactionBtn.addEventListener('click', () => {
+    confirmOverlay.style.display = 'flex';
+  });
+
   walletBtn.addEventListener('click', connectWallet);
   disconnectBtn.addEventListener('click', disconnectWallet);
 
@@ -912,11 +953,9 @@ export function createRightPanel({
 <div style="margin-bottom:6px;font-family:${UI_FONT};font-size:${FONT_SIZE}">${resRow}</div>
 <div style="margin-bottom:3px;font-family:${UI_FONT};font-size:${FONT_SIZE};color:${D}">THEME:</div>
 <div style="margin-bottom:6px;font-family:${UI_FONT};font-size:${FONT_SIZE}">${themeRow}</div>
-<div style="font-family:${UI_FONT};font-size:${FONT_SIZE}">JUMPS:         <span data-toggle="showJumps" style="cursor:pointer;color:${state.showJumps ? P : D}">[${state.showJumps ? 'X' : '_'}]</span></div>
 <div style="font-family:${UI_FONT};font-size:${FONT_SIZE}">REGION HI:     <span data-toggle="showRegionHighlights" style="cursor:pointer;color:${state.showRegionHighlights ? P : D}">[${state.showRegionHighlights ? 'X' : '_'}]</span></div>
 <div style="font-family:${UI_FONT};font-size:${FONT_SIZE}">CONSTELLATION: <span data-toggle="showConstellationHighlights" style="cursor:pointer;color:${state.showConstellationHighlights ? P : D}">[${state.showConstellationHighlights ? 'X' : '_'}]</span></div>
-<div style="font-family:${UI_FONT};font-size:${FONT_SIZE}">GALAXY GRID:   <span data-toggle="showGalaxyGrid" style="cursor:pointer;color:${state.showGalaxyGrid ? P : D}">[${state.showGalaxyGrid ? 'X' : '_'}]</span></div>
-<div style="font-family:${UI_FONT};font-size:${FONT_SIZE}">LABELS:        <span data-toggle="showCanvasLabels" style="cursor:pointer;color:${state.showCanvasLabels ? P : D}">[${state.showCanvasLabels ? 'X' : '_'}]</span></div>
+<div style="font-family:${UI_FONT};font-size:${FONT_SIZE}">JUMPS:         <span data-toggle="showJumps" style="cursor:pointer;color:${state.showJumps ? P : D}">[${state.showJumps ? 'X' : '_'}]</span></div>
 <div style="font-family:${UI_FONT};font-size:${FONT_SIZE}">TERRITORIES:   <span data-toggle="showTerritories" style="cursor:pointer;color:${state.showTerritories ? P : D}">[${state.showTerritories ? 'X' : '_'}]</span></div>
     `.trim();
   }
@@ -1036,7 +1075,7 @@ export function createRightPanel({
     return btn;
   });
   // Set default selection
-  shipBtns[2].click();
+  shipBtns[0].click();
   anchorBody.appendChild(anchorShipRow);
   const anchorAssemblyInput = makeTextInput('TURRET ASSEMBLY ID  (0x...)');
   anchorBody.appendChild(anchorLPointInput);
@@ -1077,10 +1116,24 @@ export function createRightPanel({
     });
   });
 
+  function applyShipLock(star) {
+    const iconId = star ? getIconId(star, ownership) : null;
+    // 0 = ring → CORVETTES only; 2 = square → UNRESTRICTED only; else all enabled
+    const lockedIndex = iconId === 0 ? 0 : iconId === 2 ? 2 : null;
+    shipBtns.forEach((btn, i) => {
+      const locked = lockedIndex !== null && i !== lockedIndex;
+      btn.disabled = locked;
+      btn.style.opacity = locked ? '0.3' : '1';
+      btn.style.cursor = locked ? 'not-allowed' : 'pointer';
+    });
+    if (lockedIndex !== null) shipBtns[lockedIndex].click();
+  }
+
   useStarBtn.addEventListener('click', () => {
     if (_selectedStarForAnchor) {
-      anchorStarInput.value = String(_selectedStarForAnchor.id);
+      anchorStarInput.value = _selectedStarForAnchor.name;
       anchorStarInput.title = _selectedStarForAnchor.name;
+      applyShipLock(_selectedStarForAnchor);
     }
   });
 
@@ -1110,7 +1163,7 @@ export function createRightPanel({
           constellationId: star?.constellationID ?? null,
           faction: getOwnerId(star, ownership) ?? null,
           lPoint: anchorLPointInput.value.trim() || null,
-          shipRestriction: _selectedShip !== 'UNRESTRICTED' ? _selectedShip : null,
+          shipRestriction: _selectedShip,
           assemblyId: anchorAssemblyInput.value.trim() || null
         })
       });
@@ -1134,7 +1187,7 @@ export function createRightPanel({
       anchorStatus.textContent = '✓ AUTHORIZED — LINK COPIED';
       anchorStarInput.value = '';
       anchorLPointInput.value = '';
-      shipBtns[2].click(); // reset to UNRESTRICTED
+      shipBtns[0].click(); // reset to UNRESTRICTED
       anchorAssemblyInput.value = '';
       await refreshTurretCache();
     } catch (e) {
@@ -1250,7 +1303,7 @@ export function createRightPanel({
   const factionMessages = makeMessageArea();
   factionMessages.style.display = 'none';
 
-  addMsg(generalMessages, 'SYSTEM', 'EF BATTLEGROUNDS TACTICAL FEED ONLINE');
+  addMsg(generalMessages, 'SYSTEM', 'FFW TERRITORY MAP SYS ONLINE');
   addMsg(generalMessages, 'SYSTEM', 'NODE LINK STABLE // 1200 BAUD');
   addMsg(generalMessages, 'SYSTEM', 'SCANNING REGION ACTIVITY...');
 
@@ -1338,6 +1391,14 @@ export function createRightPanel({
       addDevMsg(area, '> /register-turret <name>    — create turret URL for star');
       addDevMsg(area, '> /contest <token>           — contest active capture (+5 min)');
       addDevMsg(area, '> /compute                   — compute voronoi territories');
+      addDevMsg(area, '> /clearevents               — clear all server events');
+      return;
+    }
+
+    if (name === 'clearevents') {
+      const res = await fetch('/api/events/clear', { method: 'POST' });
+      const data = await res.json();
+      addDevMsg(area, data.ok ? '> events cleared' : `! error: ${data.reason}`);
       return;
     }
 
@@ -1425,6 +1486,10 @@ export function createRightPanel({
     const isFaction = factionMessages.style.display !== 'none';
     const area = isFaction ? factionMessages : generalMessages;
     if (text.startsWith('/')) {
+      if (_walletAddress?.toLowerCase() !== DEV_WALLET.toLowerCase()) {
+        addDevMsg(generalMessages, '! dev commands restricted');
+        return;
+      }
       runDevCommand(text, generalMessages);
       return;
     }
@@ -1508,39 +1573,46 @@ export function createRightPanel({
 
   /* ── PUBLIC API ────────────────────────────────────────────────── */
 
+  // Capture block element — updated independently by the poll
+  const captureBlock = document.createElement('div');
+  selContent.appendChild(captureBlock);
+
+  function renderCaptureBlock(star) {
+    if (!star) { captureBlock.innerHTML = ''; return; }
+    const activeEntry = Object.values(_activeCapturesCache).find(
+      (e) => String(e.starId) === String(star.id)
+    );
+    if (!activeEntry) {
+      captureBlock.innerHTML = `<div style="margin-top:4px;color:${D}">&#62; NO ACTIVE CAPTURE</div>`;
+      return;
+    }
+    const rem = Math.max(0, activeEntry.endsAt - Date.now() / 1000);
+    const m = Math.floor(rem / 60).toString().padStart(2, '0');
+    const s = Math.floor(rem % 60).toString().padStart(2, '0');
+    const capActor = (activeEntry.actorName ?? activeEntry.actor ?? '?').toUpperCase();
+    const capColor = getFactionColorHex(activeEntry.actorFaction, 'var(--ui-primary)');
+    captureBlock.innerHTML = `
+<div style="margin-top:6px;background:${capColor};color:#000;padding:4px 6px;font-family:${UI_FONT};font-size:${FONT_SIZE};line-height:1.5em">
+  <div style="font-size:13px;font-weight:bold">&#9650; CAPTURE IN PROGRESS</div>
+  <div style="font-size:12px">PLAYER: ${capActor}</div>
+  <div style="font-size:15px;font-weight:bold">${m}:${s}</div>
+</div>`.trim();
+  }
+
   function setSelectedStar(star) {
     _selectedStarForAnchor = star;
     if (!star) {
       selRoot.style.display = 'none';
+      _refreshSelectedCapture = null;
       return;
     }
 
     const ownerId = getOwnerId(star, ownership);
     const factionHex = ownerId != null ? getFactionColorHex(ownerId, null) : null;
     const factionName = ownerId != null ? getFactionName(ownerId, ownership) : null;
-
     const ownerHtml = factionHex
       ? `${colorSquare(factionHex)} <span style="color:${factionHex}">${factionName}</span>`
       : `<span style="color:${D}">UNCLAIMED</span>`;
-
-    // Find any active capture for this star
-    const activeEntry = Object.values(_activeCapturesCache).find(
-      (e) => String(e.starId) === String(star.id)
-    );
-
-    let captureHtml = `<div style="margin-top:4px;color:${D}">&#62; NO ACTIVE CAPTURE</div>`;
-    if (activeEntry) {
-      const rem = Math.max(0, activeEntry.endsAt - Date.now() / 1000);
-      const m = Math.floor(rem / 60).toString().padStart(2, '0');
-      const s = Math.floor(rem % 60).toString().padStart(2, '0');
-      const capActor = (activeEntry.actorName ?? activeEntry.actor ?? '?').toUpperCase();
-      captureHtml = `
-<div style="margin-top:6px;background:var(--ui-primary);color:#000;padding:4px 6px;font-family:${UI_FONT};font-size:${FONT_SIZE};line-height:1.5em">
-  <div style="font-size:13px;font-weight:bold">&#9650; CAPTURE IN PROGRESS</div>
-  <div style="font-size:12px">PLAYER: ${capActor}</div>
-  <div style="font-size:15px;font-weight:bold">${m}:${s}</div>
-</div>`.trim();
-    }
 
     const turret = _turretsByStarId.get(String(star.id));
     let turretLine = `<span style="color:${D}">NONE</span>`;
@@ -1551,15 +1623,18 @@ export function createRightPanel({
     }
 
     selContent.innerHTML = `
+<div><span style="color:${D}">OWNER:  </span>${ownerHtml}</div>
+<div><span style="color:${D}">TURRET: </span>${turretLine}</div>
+<div style="border-top:1px solid ${D};margin:3px 0"></div>
 <div><span style="color:${D}">NAME:   </span>${star.name.toUpperCase()}</div>
 <div><span style="color:${D}">ID:     </span>${star.id}</div>
 <div><span style="color:${D}">REGION: </span>${(star.regionName || String(star.regionID) || '?').toUpperCase()}</div>
 <div><span style="color:${D}">CONST:  </span>${star.constellationID ?? '?'}</div>
-<div><span style="color:${D}">OWNER:  </span>${ownerHtml}</div>
-<div><span style="color:${D}">TURRET: </span>${turretLine}</div>
-${captureHtml}
     `.trim();
+    selContent.appendChild(captureBlock);
+    renderCaptureBlock(star);
 
+    _refreshSelectedCapture = () => renderCaptureBlock(star);
     selRoot.style.display = 'block';
   }
 

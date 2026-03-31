@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EF BATTLEGROUNDS — CAPTURE INTERFACE</title>
+  <title>FFW — CAPTURE INTERFACE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
   <style>
@@ -212,7 +212,6 @@
     <div class="panel-title">+--[ CAPTURE INTERFACE ]</div>
 
     <div class="row"><span class="label">SYSTEM:</span>     <span class="value" id="star-name">—</span></div>
-    <div class="row"><span class="label">SYSTEM ID:</span>  <span class="value" id="star-id">—</span></div>
     <div class="row"><span class="label">CONST ID:</span>   <span class="value" id="const-id">—</span></div>
     <div class="row"><span class="label">FACTION:</span>    <span class="value" id="faction-val">—</span></div>
 
@@ -469,7 +468,6 @@
     turretData = data.turret;
 
     $('star-name').textContent   = (turretData.starName ?? '?').toUpperCase();
-    $('star-id').textContent     = turretData.starId ?? '?';
     $('const-id').textContent    = turretData.constellationId ?? '?';
     $('faction-val').textContent = turretData.faction != null
       ? `FACTION_${turretData.faction}` : 'UNASSIGNED';

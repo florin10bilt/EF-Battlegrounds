@@ -1,6 +1,8 @@
 from flask import Flask, send_from_directory, request, jsonify
 from pathlib import Path
 import json
+import secrets
+import time as _time
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -14,6 +16,7 @@ CAPTURES_PATH = DATA_DIR / "captures.json"
 CHAT_PATH = DATA_DIR / "chat.json"
 
 app = Flask(__name__, static_folder=".", static_url_path="")
+application = app  # PythonAnywhere / WSGI
 
 
 def read_json_file(path: Path):
@@ -22,18 +25,14 @@ def read_json_file(path: Path):
 
 
 def write_json_file(path: Path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+        json.dump(payload, f, indent=2, ensure_ascii=False)
 
 
 @app.route("/")
 def index():
     return send_from_directory(BASE_DIR, "index.html")
-
-
-@app.route("/<path:path>")
-def static_files(path):
-    return send_from_directory(BASE_DIR, path)
 
 
 @app.route("/api/characters/<wallet>", methods=["GET"])
@@ -58,16 +57,11 @@ def save_character(wallet):
         if payload is None:
             return jsonify({"ok": False, "reason": "invalid-json"}), 400
 
-        if CHARACTERS_PATH.exists():
-            data = read_json_file(CHARACTERS_PATH)
-        else:
-            data = {}
-
-        # Preserve factionSetAt if faction hasn't changed
+        data = read_json_file(CHARACTERS_PATH) if CHARACTERS_PATH.exists() else {}
         existing = data.get(wallet, {})
+
         if payload.get("faction") is not None and payload["faction"] != existing.get("faction"):
-            import time
-            payload["factionSetAt"] = int(time.time())
+            payload["factionSetAt"] = int(_time.time())
         elif "factionSetAt" not in payload:
             payload["factionSetAt"] = existing.get("factionSetAt")
 
@@ -82,16 +76,19 @@ def save_character(wallet):
 def _read_ownership():
     return read_json_file(OWNERSHIP_PATH) if OWNERSHIP_PATH.exists() else {}
 
+
 def _write_ownership(data):
     write_json_file(OWNERSHIP_PATH, data)
+
 
 def _append_event(entry):
     events = read_json_file(EVENTS_PATH) if EVENTS_PATH.exists() else []
     events.insert(0, entry)
     cutoff = _time.time() - 86400
     events = [e for e in events if e.get("ts", 0) > cutoff]
-    events = events[:200]  # keep last 200
+    events = events[:200]
     write_json_file(EVENTS_PATH, events)
+
 
 @app.route("/api/events", methods=["GET"])
 def get_events():
@@ -104,14 +101,25 @@ def get_events():
         print("[ERROR get-events]", error)
         return jsonify({"ok": False, "events": []}), 500
 
+
+@app.route("/api/events/clear", methods=["POST"])
+def clear_events():
+    try:
+        write_json_file(EVENTS_PATH, [])
+        return jsonify({"ok": True})
+    except Exception as error:
+        print("[ERROR clear-events]", error)
+        return jsonify({"ok": False, "reason": str(error)}), 500
+
+
 @app.route("/api/ownership/anchor", methods=["POST"])
 def anchor_star():
-    """Mark a star as anchored (fill its icon) for a faction."""
     try:
         body = request.get_json(silent=True) or {}
         star_id = str(body.get("starId", ""))
         faction = body.get("faction")
-        icon_id = body.get("iconId", 1)  # default filled dot
+        icon_id = body.get("iconId", 1)
+
         if not star_id:
             return jsonify({"ok": False, "reason": "missing starId"}), 400
 
@@ -123,9 +131,8 @@ def anchor_star():
         systems[star_id] = [current_faction, icon_id]
         _write_ownership(ownership)
 
-        import time
         _append_event({
-            "ts": time.time(),
+            "ts": _time.time(),
             "type": "anchor",
             "starId": star_id,
             "faction": current_faction,
@@ -137,13 +144,14 @@ def anchor_star():
         print("[ERROR anchor-star]", error)
         return jsonify({"ok": False, "reason": "error"}), 500
 
+
 @app.route("/api/ownership/capture", methods=["POST"])
 def capture_star():
-    """Transfer a star to a different faction."""
     try:
         body = request.get_json(silent=True) or {}
         star_id = str(body.get("starId", ""))
         faction = body.get("faction")
+
         if not star_id or faction is None:
             return jsonify({"ok": False, "reason": "missing starId or faction"}), 400
 
@@ -154,9 +162,8 @@ def capture_star():
         systems[star_id] = [int(faction), icon_id]
         _write_ownership(ownership)
 
-        import time
         _append_event({
-            "ts": time.time(),
+            "ts": _time.time(),
             "type": "capture",
             "starId": star_id,
             "faction": int(faction),
@@ -169,15 +176,13 @@ def capture_star():
         return jsonify({"ok": False, "reason": "error"}), 500
 
 
-# ── Turret capture system ──────────────────────────────────────────────────────
-
-import secrets, time as _time
-
 def _read_captures():
     return read_json_file(CAPTURES_PATH) if CAPTURES_PATH.exists() else {}
 
+
 def _write_captures(data):
     write_json_file(CAPTURES_PATH, data)
+
 
 @app.route("/api/turrets", methods=["GET"])
 def list_turrets():
@@ -191,21 +196,23 @@ def list_turrets():
         print("[ERROR list-turrets]", error)
         return jsonify({"ok": False, "turrets": []}), 500
 
+
 @app.route("/api/turrets", methods=["POST"])
 def register_turret():
-    """Register a turret linked to a star. Returns a secret hash URL."""
     try:
         body = request.get_json(silent=True) or {}
         star_id = str(body.get("starId", ""))
         star_name = body.get("starName", star_id)
         constellation_id = body.get("constellationId")
         faction = body.get("faction")
+
         if not star_id:
             return jsonify({"ok": False, "reason": "missing starId"}), 400
 
         captures = _read_captures()
         turrets = captures.setdefault("turrets", {})
         token = secrets.token_hex(12)
+
         turrets[token] = {
             "starId": star_id,
             "starName": star_name,
@@ -222,6 +229,7 @@ def register_turret():
         print("[ERROR register-turret]", error)
         return jsonify({"ok": False, "reason": "error"}), 500
 
+
 @app.route("/api/turrets/<token>", methods=["GET"])
 def get_turret(token):
     try:
@@ -235,6 +243,7 @@ def get_turret(token):
         print("[ERROR get-turret]", error)
         return jsonify({"ok": False, "reason": "error"}), 500
 
+
 @app.route("/api/captures/active", methods=["GET"])
 def get_active_captures():
     try:
@@ -244,9 +253,9 @@ def get_active_captures():
         print("[ERROR get-active-captures]", error)
         return jsonify({"ok": False, "active": {}}), 500
 
+
 @app.route("/api/turrets/<token>/capture", methods=["POST"])
 def start_capture(token):
-    """Start a 20-minute capture timer for a turret."""
     try:
         captures = _read_captures()
         turret = captures.get("turrets", {}).get(token)
@@ -256,9 +265,7 @@ def start_capture(token):
         body = request.get_json(silent=True) or {}
         wallet = body.get("walletAddress")
         actor_faction = body.get("actorFaction")
-        star_faction = turret.get("faction")
 
-        # Faction check: read CURRENT ownership (not just turret registration faction)
         actor_faction_int = int(actor_faction) if actor_faction is not None else None
         current_ownership = _read_ownership()
         star_entry = current_ownership.get("systems", {}).get(str(turret["starId"]), [])
@@ -270,7 +277,6 @@ def start_capture(token):
             if actor_faction_int == current_star_faction:
                 return jsonify({"ok": False, "reason": "friendly-faction"}), 403
 
-        # One active capture per wallet
         active = captures.setdefault("active", {})
         if wallet:
             for t, a in active.items():
@@ -281,7 +287,7 @@ def start_capture(token):
         actor_name = body.get("actorName", body.get("actor", "UNKNOWN"))
         active[token] = {
             "startedAt": now,
-            "endsAt": now + 1200,  # 20 min
+            "endsAt": now + 1200,
             "actor": body.get("actor", "UNKNOWN"),
             "actorName": actor_name,
             "walletAddress": wallet,
@@ -310,9 +316,9 @@ def start_capture(token):
         print("[ERROR start-capture]", error)
         return jsonify({"ok": False, "reason": "error"}), 500
 
+
 @app.route("/api/turrets/<token>/contest", methods=["POST"])
 def contest_capture(token):
-    """Add 5 minutes to an active capture timer (enemy faction contest)."""
     try:
         captures = _read_captures()
         active = captures.get("active", {})
@@ -324,12 +330,11 @@ def contest_capture(token):
         contester_faction = body.get("actorFaction")
         capturing_faction = entry.get("actorFaction")
 
-        # Only enemy faction can contest
         if contester_faction is not None and capturing_faction is not None:
             if int(contester_faction) == int(capturing_faction):
                 return jsonify({"ok": False, "reason": "same-faction"}), 403
 
-        entry["endsAt"] = entry["endsAt"] + 300  # +5 min
+        entry["endsAt"] = entry["endsAt"] + 300
         entry["contested"] = True
         _write_captures(captures)
 
@@ -350,9 +355,9 @@ def contest_capture(token):
         print("[ERROR contest-capture]", error)
         return jsonify({"ok": False, "reason": "error"}), 500
 
+
 @app.route("/api/turrets/<token>/complete", methods=["POST"])
 def complete_capture(token):
-    """Complete a capture after timer expires — transfers star ownership."""
     try:
         captures = _read_captures()
         active = captures.get("active", {})
@@ -361,7 +366,7 @@ def complete_capture(token):
             return jsonify({"ok": False, "reason": "no-active-capture"}), 404
 
         now = _time.time()
-        if now < entry.get("endsAt", 0) - 5:  # 5s grace period
+        if now < entry.get("endsAt", 0) - 5:
             return jsonify({"ok": False, "reason": "timer-not-expired"}), 400
 
         actor_faction = entry.get("actorFaction")
@@ -394,6 +399,7 @@ def complete_capture(token):
         print("[ERROR complete-capture]", error)
         return jsonify({"ok": False, "reason": "error"}), 500
 
+
 @app.route("/api/turrets/<token>/cancel", methods=["POST"])
 def cancel_capture(token):
     try:
@@ -416,9 +422,9 @@ def cancel_capture(token):
         print("[ERROR cancel-capture]", error)
         return jsonify({"ok": False, "reason": "error"}), 500
 
+
 @app.route("/turret/<token>")
 def turret_page(token):
-    """Serve the turret capture interface."""
     return send_from_directory(BASE_DIR, "turret.html")
 
 
@@ -460,13 +466,16 @@ def clear_voronoi_cache():
         return jsonify({"ok": False, "reason": "error"}), 500
 
 
-CHAT_MAX_AGE = 86400  # 24 hours
+CHAT_MAX_AGE = 86400
+
 
 def _read_chat():
     return read_json_file(CHAT_PATH) if CHAT_PATH.exists() else []
 
+
 def _write_chat(data):
     write_json_file(CHAT_PATH, data)
+
 
 @app.route("/api/chat", methods=["GET"])
 def get_chat():
@@ -475,7 +484,6 @@ def get_chat():
         since = request.args.get("since", 0, type=float)
         now = _time.time()
         messages = _read_chat()
-        # Purge messages older than 24h
         messages = [m for m in messages if now - m.get("ts", 0) < CHAT_MAX_AGE]
         _write_chat(messages)
         filtered = [m for m in messages if m.get("channel") == channel and m.get("ts", 0) > since]
@@ -483,6 +491,7 @@ def get_chat():
     except Exception as error:
         print("[ERROR get-chat]", error)
         return jsonify({"ok": False, "messages": []}), 500
+
 
 @app.route("/api/chat", methods=["POST"])
 def send_chat():
@@ -493,10 +502,16 @@ def send_chat():
         text = str(body.get("text", "")).strip()[:500]
         if not text:
             return jsonify({"ok": False, "reason": "empty"}), 400
+
         now = _time.time()
         messages = _read_chat()
         messages = [m for m in messages if now - m.get("ts", 0) < CHAT_MAX_AGE]
-        messages.append({"channel": channel, "sender": sender, "text": text, "ts": now})
+        messages.append({
+            "channel": channel,
+            "sender": sender,
+            "text": text,
+            "ts": now
+        })
         _write_chat(messages)
         return jsonify({"ok": True})
     except Exception as error:
@@ -504,5 +519,10 @@ def send_chat():
         return jsonify({"ok": False, "reason": "error"}), 500
 
 
+@app.route("/<path:path>")
+def static_files(path):
+    return send_from_directory(BASE_DIR, path)
+
+
 if __name__ == "__main__":
-    app.run(port=8080, debug=True)
+    app.run(debug=False)

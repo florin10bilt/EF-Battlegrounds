@@ -277,42 +277,48 @@ export function createCanvasIconRenderer(baseCanvas, camera) {
         const sx = (nx * 0.5 + 0.5) * width;
         const sy = (-ny * 0.5 + 0.5) * height;
 
-        // Pulsing ring — capturer's faction color
-        const ringColor = getFactionColorHex(entry.actorFaction, UI_COLOR);
-        ctx.save();
-        ctx.globalAlpha = 0.5 + pulse * 0.5;
-        ctx.strokeStyle = ringColor;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(sx, sy, 8 + pulse * 4, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+        const factionColor = getFactionColorHex(entry.actorFaction, UI_COLOR);
 
-        // Two-line text label with background
         const rem = Math.max(0, entry.endsAt - now);
         const mm = Math.floor(rem / 60).toString().padStart(2, '0');
         const ss = Math.floor(rem % 60).toString().padStart(2, '0');
         const starName = (entry.starName ?? '?').toUpperCase();
-        const subText = `CAPTURING  ${mm}:${ss}`;
-        const lx = sx + 14;
+        const timerText = `${mm}:${ss}`;
+
         ctx.save();
         ctx.font = `bold 15px ${UI_FONT}`;
         const nameW = ctx.measureText(starName).width;
-        ctx.font = `11px ${UI_FONT}`;
-        const subW = ctx.measureText(subText).width;
-        const boxW = Math.max(nameW, subW) + 10;
-        // Dark background box
+        ctx.font = `13px ${UI_FONT}`;
+        const timerW = ctx.measureText(timerText).width;
+        const boxW = Math.max(nameW, timerW) + 10;
+        const lineH = 16;
+        const boxH = lineH * 2 + 6;
+        const lx = sx + 12;
+        // Align box so star name row is vertically centered on sy
+        const boxTop = sy - lineH - 3;
+
+        // Faction-colored background box
+        ctx.fillStyle = factionColor;
+        ctx.fillRect(lx - 2, boxTop, boxW, boxH);
+
+        // Star name — aligned with star y
         ctx.fillStyle = '#000000';
-        ctx.fillRect(lx - 2, sy - 16, boxW, 30);
-        // Star name
-        ctx.fillStyle = UI_COLOR;
         ctx.textBaseline = 'bottom';
         ctx.font = `bold 15px ${UI_FONT}`;
         ctx.fillText(starName, lx, sy + 1);
-        // Countdown
+
+        // Timer below
         ctx.textBaseline = 'top';
-        ctx.font = `11px ${UI_FONT}`;
-        ctx.fillText(subText, lx, sy + 2);
+        ctx.font = `13px ${UI_FONT}`;
+        ctx.fillText(timerText, lx, sy + 2);
+
+        // Pulsing circle over the star
+        ctx.strokeStyle = factionColor;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.5 + pulse * 0.5;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 7 + pulse * 3, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
       });
     }

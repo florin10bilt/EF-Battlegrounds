@@ -30,8 +30,7 @@ import {
   buildOwnerMap,
   buildTerritoryColors,
   getIconName,
-  getOwnerColorHex,
-  createOwnershipSignature
+  getOwnerColorHex
 } from './modules/starOwnership.js';
 
 /* ============================================================================
@@ -182,6 +181,15 @@ async function main() {
 
   const ownedStars = getOwnedStars(starData, ownership);
 
+  // Center camera on the centroid of all owned stars at startup
+  if (ownedStars.length > 0) {
+    let cx = 0, cy = 0, cz = 0;
+    for (const s of ownedStars) { cx += s.position[0]; cy += s.position[1]; cz += s.position[2]; }
+    cx /= ownedStars.length; cy /= ownedStars.length; cz /= ownedStars.length;
+    camera.flyTo([cx, cy, cz]);
+    camera.distanceTarget = 1.2e6;
+  }
+
   const drawJumps = await createJumpRenderer(regl, camera, debug);
 
   debug.log(`Loaded ${starData.length} stars`);
@@ -207,8 +215,7 @@ async function main() {
     },
     cacheKey: 'star-ownership-v1',
     cacheSignature: JSON.stringify({
-      source: 'starOwnership.json',
-      ownership: createOwnershipSignature(ownership),
+      source: 'ffw-voronoi-v1',
       options: VORONOI_BUILD_OPTIONS
     }),
     onStateChange: ({ cells, ownerMap }) => {
@@ -267,6 +274,17 @@ async function main() {
   const leftPanel = createLeftPanel({
     ownership,
     starData,
+    onOwnershipChange: async () => {
+      const fresh = await loadStarOwnership();
+      ownership.systems = fresh.systems;
+      ownership.factions = fresh.factions;
+      for (const star of starData) {
+        star.ownerColorHex = getOwnerColorHex(star, ownership);
+      }
+      const newOwned = getOwnedStars(starData, ownership);
+      ownedStars.splice(0, ownedStars.length, ...newOwned);
+      syncStarVisuals();
+    },
     onStarClick: (starId) => {
       const star = starData.find(s => String(s.id) === String(starId));
       if (star?.position) camera.flyTo(star.position);

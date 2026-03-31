@@ -20,18 +20,5 @@
       "createdAt": 1774977645.9467611
     }
   },
-  "active": {
-    "0b5cec12b36b4adda1a9fdd9": {
-      "startedAt": 1774978384.5172827,
-      "endsAt": 1774979584.5172827,
-      "actor": "0x36186c",
-      "actorName": "Sol",
-      "walletAddress": "0x36186c31727accc04f45aea50e4dcbec5dee3f4e63616853054992ee5c1c43e6",
-      "actorFaction": 1,
-      "starId": "30016516",
-      "starName": "UGD-0KB",
-      "constellationId": 20001149,
-      "faction": 2
-    }
-  }
+  "active": {}
 }
