@@ -391,7 +391,7 @@
       ? `<span style="color:${factionColor}">&#9632;</span>` : '—';
     $('char-name-display').textContent =
       (charRecord?.characterName ?? walletAddress?.slice(0, 8) ?? 'PILOT').toUpperCase();
-    $('faction-display').textContent = faction ? `FACTION_${faction}` : 'NO FACTION';
+    $('faction-display').textContent = faction ? (faction === 1 ? 'AMBER' : 'TEAL') : 'NO FACTION';
     $('faction-display').style.color = factionColor;
 
     // Re-evaluate buttons now that we know who this is
@@ -470,7 +470,7 @@
     $('star-name').textContent   = (turretData.starName ?? '?').toUpperCase();
     $('const-id').textContent    = turretData.constellationId ?? '?';
     $('faction-val').textContent = turretData.faction != null
-      ? `FACTION_${turretData.faction}` : 'UNASSIGNED';
+      ? (turretData.faction === 1 ? 'AMBER' : 'TEAL') : 'UNASSIGNED';
 
     if (data.active) {
       showActiveCapture(data.active);

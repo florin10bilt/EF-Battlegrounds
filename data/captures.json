@@ -18,6 +18,36 @@
       "assemblyId": "dsadhsajklda",
       "shipRestriction": "Frigate",
       "createdAt": 1774977645.9467611
+    },
+    "ff08d69c0bd79112822e1509": {
+      "starId": "30016516",
+      "starName": "UGD-0KB",
+      "constellationId": 20001149,
+      "faction": 2,
+      "lPoint": "P4L4",
+      "assemblyId": "0xc237a82fba6236febcb0e3fd022909b4f6135fa723f2876e128b024614789ee6",
+      "shipRestriction": "CORVETTES",
+      "createdAt": 1774997231.6961668
+    },
+    "3fc6d96b5ffaaace0dc760d6": {
+      "starId": "30016517",
+      "starName": "ILM-M4C",
+      "constellationId": 20001149,
+      "faction": 2,
+      "lPoint": "L4R4",
+      "assemblyId": "0xc237a82fba6236febcb0e3fd022909b4f6135fa723f2876e128b024614789ee6",
+      "shipRestriction": "CORVETTES",
+      "createdAt": 1774997666.03187
+    },
+    "1a146bbc795f9d0a75569f53": {
+      "starId": "30016517",
+      "starName": "ILM-M4C",
+      "constellationId": 20001149,
+      "faction": 2,
+      "lPoint": "L4L5",
+      "assemblyId": "abc",
+      "shipRestriction": "CORVETTES",
+      "createdAt": 1775002236.3345504
     }
   },
   "active": {}
