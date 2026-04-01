@@ -111,7 +111,7 @@ export function countConstellationsByFaction(starData, ownership) {
 }
 
 export function getFactionName(ownerId, ownership) {
-  return `FACTION_${ownerId}`;
+  return ownerId === 1 ? 'AMBER' : ownerId === 2 ? 'TEAL' : `FACTION_${ownerId}`;
 }
 
 export function countSystemsByFaction(starData, ownership) {

@@ -485,7 +485,7 @@ export function createLeftPanel({ ownership, starData, onStarClick = null, onOwn
       suffix = `  ${actor}`;
     } else if (e.type === 'capture') {
       prefix = `[${t}] CAPTURED: `;
-      suffix = `  → FACTION_${e.faction}  ${actor}`;
+      suffix = `  → ${e.faction === 1 ? 'AMBER' : 'TEAL'}  ${actor}`;
     } else if (e.type === 'anchor') {
       prefix = `[${t}] ANCHORED: `;
     } else {
@@ -716,8 +716,8 @@ export function createRightPanel({
       <div style="font-size:13px;color:${D};margin-bottom:16px">SELECT YOUR ALLEGIANCE. LOCKED FOR 24H AFTER CHOOSING.</div>
       <div id="fp-cooldown-msg" style="font-size:13px;color:${D};margin-bottom:16px;display:none"></div>
       <div style="display:flex;gap:10px;margin-bottom:16px">
-        <button id="fp-f1" style="flex:1;padding:8px;background:transparent;border:1px solid ${P};color:${P};font-family:${UI_FONT};font-size:15px;cursor:pointer;letter-spacing:0.05em">[ FACTION_1 ]</button>
-        <button id="fp-f2" style="flex:1;padding:8px;background:transparent;border:1px solid ${P};color:${P};font-family:${UI_FONT};font-size:15px;cursor:pointer;letter-spacing:0.05em">[ FACTION_2 ]</button>
+        <button id="fp-f1" style="flex:1;padding:8px;background:transparent;border:1px solid #ff5900;color:#ff5900;font-family:${UI_FONT};font-size:15px;cursor:pointer;letter-spacing:0.05em">[ AMBER ]</button>
+        <button id="fp-f2" style="flex:1;padding:8px;background:transparent;border:1px solid #5be6ff;color:#5be6ff;font-family:${UI_FONT};font-size:15px;cursor:pointer;letter-spacing:0.05em">[ TEAL ]</button>
       </div>
       <div id="fp-status" style="font-size:12px;color:${D};min-height:16px"></div>
     </div>
@@ -748,14 +748,14 @@ export function createRightPanel({
       f2Btn.disabled = false;
       f1Btn.style.opacity = currentFaction === 1 ? '1' : '0.6';
       f2Btn.style.opacity = currentFaction === 2 ? '1' : '0.6';
-      f1Btn.style.background = currentFaction === 1 ? P : 'transparent';
-      f1Btn.style.color = currentFaction === 1 ? '#000' : P;
-      f2Btn.style.background = currentFaction === 2 ? P : 'transparent';
-      f2Btn.style.color = currentFaction === 2 ? '#000' : P;
+      f1Btn.style.background = currentFaction === 1 ? '#ff5900' : 'transparent';
+      f1Btn.style.color = currentFaction === 1 ? '#000' : '#ff5900';
+      f2Btn.style.background = currentFaction === 2 ? '#5be6ff' : 'transparent';
+      f2Btn.style.color = currentFaction === 2 ? '#000' : '#5be6ff';
     }
 
     statusMsg.textContent = currentFaction
-      ? `CURRENTLY ENLISTED: FACTION_${currentFaction}`
+      ? `CURRENTLY ENLISTED: ${currentFaction === 1 ? 'AMBER' : 'TEAL'}`
       : 'NO FACTION — CHOOSE TO PARTICIPATE';
 
     factionPopup.style.display = 'flex';
@@ -779,7 +779,7 @@ export function createRightPanel({
 
   function renderCharInfo(record) {
     const factionHex = record?.faction ? getFactionColorHex(record.faction, D) : D;
-    const factionLabel = record?.faction ? `FACTION_${record.faction}` : 'NO FACTION';
+    const factionLabel = record?.faction ? (record.faction === 1 ? 'AMBER' : 'TEAL') : 'NO FACTION';
     const factionSquare = `<span style="color:${factionHex}">&#9632;</span>`;
     charInfo.innerHTML = `
       <div style="color:${P};font-size:14px;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(record?.characterName ?? '???').toUpperCase()}</div>
@@ -987,6 +987,15 @@ export function createRightPanel({
   /* ── AUTHORIZE_TURRETS ─────────────────────────────────────────── */
   const { root: anchorRoot, body: anchorBody } = makeModule('AUTHORIZE_TURRETS', { startOpen: false });
 
+  const _TURRET_WORLD_PACKAGE = '0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75';
+  const _TURRET_CHARACTER_ID  = '0x40cd1e9802e9fb02fe3568143a368852dd1c935a629480156793d73065e9f670';
+  const _TURRET_OWNER_CAP_ID  = '0xc4020a27f34ff1beef09c3126f5857b813541e249e292f3bfc2ba004182681f1';
+  const _SHIP_TO_PACKAGE = {
+    CORVETTES:    '0x6c4894050b04b373b00be46ec7c97d6f3fb1529a23f6489a1a06290f67492161',
+    FRIGATES:     '0x2f1d61b84d581e9eb1453876cf0a1c78496dd93f808416d290034ddc881c993b',
+    UNRESTRICTED: '0xff5e2170312abe1fb42bd7a8180196308a667459049ee590e4682e7195415f47',
+  };
+
   // Turret cache for SELECTED_SYSTEM lookup: starId (string) → turret entry
   let _turretsByStarId = new Map();
 
@@ -1144,6 +1153,18 @@ export function createRightPanel({
       anchorStatus.textContent = '! ENTER STAR NAME OR ID';
       return;
     }
+    const assemblyId = anchorAssemblyInput.value.trim();
+    if (!assemblyId) {
+      anchorStatus.style.color = 'red';
+      anchorStatus.textContent = '! ENTER TURRET ASSEMBLY ID';
+      return;
+    }
+    if (!_activeWallet) {
+      anchorStatus.style.color = 'red';
+      anchorStatus.textContent = '! CONNECT WALLET FIRST';
+      return;
+    }
+
     const star = starData.find(
       (s) => String(s.id) === rawStar || s.name.toUpperCase() === rawStar.toUpperCase()
     );
@@ -1155,6 +1176,7 @@ export function createRightPanel({
     anchorStatus.textContent = '';
 
     try {
+      // 1 — Register on server
       const res = await fetch('/api/turrets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1164,7 +1186,7 @@ export function createRightPanel({
           faction: getOwnerId(star, ownership) ?? null,
           lPoint: anchorLPointInput.value.trim() || null,
           shipRestriction: _selectedShip,
-          assemblyId: anchorAssemblyInput.value.trim() || null
+          assemblyId
         })
       });
       const data = await res.json();
@@ -1174,7 +1196,45 @@ export function createRightPanel({
       anchorCopyBtn.style.display = 'block';
       navigator.clipboard.writeText(_lastAnchorUrl).catch(() => {});
 
-      // Anchor the star icon (filled dot)
+      // 2 — On-chain authorize_extension
+      anchorStatus.style.color = D;
+      anchorStatus.textContent = 'BUILDING TRANSACTION...';
+
+      const { Transaction } = await import('https://esm.sh/@mysten/sui@2.4.0/transactions');
+      const packageId = _SHIP_TO_PACKAGE[_selectedShip];
+      const tx = new Transaction();
+      tx.setSender(_walletAddress);
+
+      const [borrowedOwnerCap, receipt] = tx.moveCall({
+        target: `${_TURRET_WORLD_PACKAGE}::character::borrow_owner_cap`,
+        typeArguments: [`${_TURRET_WORLD_PACKAGE}::turret::Turret`],
+        arguments: [tx.object(_TURRET_CHARACTER_ID), tx.object(_TURRET_OWNER_CAP_ID)],
+      });
+
+      tx.moveCall({
+        target: `${_TURRET_WORLD_PACKAGE}::turret::authorize_extension`,
+        typeArguments: [`${packageId}::turret::TurretAuth`],
+        arguments: [tx.object(assemblyId), borrowedOwnerCap],
+      });
+
+      tx.moveCall({
+        target: `${_TURRET_WORLD_PACKAGE}::character::return_owner_cap`,
+        typeArguments: [`${_TURRET_WORLD_PACKAGE}::turret::Turret`],
+        arguments: [tx.object(_TURRET_CHARACTER_ID), borrowedOwnerCap, receipt],
+      });
+
+      anchorStatus.textContent = 'WAITING FOR WALLET APPROVAL...';
+      const signFeature = _activeWallet.features['sui:signAndExecuteTransaction'];
+      if (!signFeature) throw new Error('WALLET DOES NOT SUPPORT signAndExecuteTransaction');
+
+      const txResult = await signFeature.signAndExecuteTransaction({
+        transaction: tx,
+        account: _activeWallet.accounts[0],
+        chain: 'sui:testnet',
+      });
+      console.log('Authorize turret on-chain result:', txResult);
+
+      // 3 — Anchor star icon
       await fetch('/api/ownership/anchor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1184,10 +1244,10 @@ export function createRightPanel({
       else onStateChange?.();
 
       anchorStatus.style.color = P;
-      anchorStatus.textContent = '✓ AUTHORIZED — LINK COPIED';
+      anchorStatus.textContent = '✓ AUTHORIZED ON-CHAIN — LINK COPIED';
       anchorStarInput.value = '';
       anchorLPointInput.value = '';
-      shipBtns[0].click(); // reset to UNRESTRICTED
+      shipBtns[0].click();
       anchorAssemblyInput.value = '';
       await refreshTurretCache();
     } catch (e) {
