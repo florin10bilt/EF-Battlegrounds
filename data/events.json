@@ -1,122 +1,18 @@
 [
   {
-    "ts": 1775004730.2833664,
-    "type": "capture",
-    "starId": "30016517",
-    "starName": "ILM-M4C",
-    "faction": 1,
-    "actor": "0x36186c",
-    "actorName": "Sol",
-    "token": "1a146bbc795f9d0a75569f53"
-  },
-  {
-    "ts": 1775003486.0546405,
-    "type": "capture_start",
-    "starId": "30016517",
-    "starName": "ILM-M4C",
-    "constellationId": 20001149,
-    "faction": 2,
-    "actor": "0x36186c",
-    "actorName": "Sol",
-    "endsAt": 1775004686.0546405,
-    "token": "1a146bbc795f9d0a75569f53"
-  },
-  {
-    "ts": 1775003430.4454625,
-    "type": "capture_cancel",
-    "starId": "30016517",
-    "starName": "ILM-M4C",
-    "actor": "0x36186c",
-    "token": "1a146bbc795f9d0a75569f53"
-  },
-  {
-    "ts": 1775002256.335994,
-    "type": "capture_start",
-    "starId": "30016517",
-    "starName": "ILM-M4C",
-    "constellationId": 20001149,
-    "faction": 2,
-    "actor": "0x36186c",
-    "actorName": "Sol",
-    "endsAt": 1775003456.335994,
-    "token": "1a146bbc795f9d0a75569f53"
-  },
-  {
-    "ts": 1774997231.706066,
+    "ts": 1775681922.6084347,
     "type": "anchor",
-    "starId": "30016516",
+    "starId": "30016515",
     "faction": 2,
     "iconId": 1,
     "actor": "DEV"
   },
   {
-    "ts": 1774985721.4434757,
-    "type": "capture_cancel",
-    "starId": "30016516",
-    "starName": "UGD-0KB",
-    "actor": "0x36186c",
-    "token": "0b5cec12b36b4adda1a9fdd9"
-  },
-  {
-    "ts": 1774985712.619798,
-    "type": "capture_start",
-    "starId": "30016516",
-    "starName": "UGD-0KB",
-    "constellationId": 20001149,
-    "faction": 2,
-    "actor": "0x36186c",
-    "actorName": "Sol",
-    "endsAt": 1774986912.619798,
-    "token": "0b5cec12b36b4adda1a9fdd9"
-  },
-  {
-    "ts": 1774985596.9067497,
-    "type": "capture",
-    "starId": "30016516",
-    "faction": 2,
-    "actor": "0x36186c",
-    "starName": "UGD-0KB"
-  },
-  {
-    "ts": 1774985530.2821674,
-    "type": "capture",
-    "starId": "30016516",
-    "starName": "UGD-0KB",
+    "ts": 1775681061.42247,
+    "type": "anchor",
+    "starId": "30013480",
     "faction": 1,
-    "actor": "0x36186c",
-    "actorName": "Sol",
-    "token": "0b5cec12b36b4adda1a9fdd9"
-  },
-  {
-    "ts": 1774984315.6215887,
-    "type": "capture_start",
-    "starId": "30016516",
-    "starName": "UGD-0KB",
-    "constellationId": 20001149,
-    "faction": 2,
-    "actor": "0x36186c",
-    "actorName": "Sol",
-    "endsAt": 1774985515.6215887,
-    "token": "0b5cec12b36b4adda1a9fdd9"
-  },
-  {
-    "ts": 1774984303.1858244,
-    "type": "capture_cancel",
-    "starId": "30016516",
-    "starName": "UGD-0KB",
-    "actor": "0x36186c",
-    "token": "0b5cec12b36b4adda1a9fdd9"
-  },
-  {
-    "ts": 1774984081.0264578,
-    "type": "capture_start",
-    "starId": "30016516",
-    "starName": "UGD-0KB",
-    "constellationId": 20001149,
-    "faction": 2,
-    "actor": "0x36186c",
-    "actorName": "Sol",
-    "endsAt": 1774985281.0264578,
-    "token": "0b5cec12b36b4adda1a9fdd9"
+    "iconId": 1,
+    "actor": "DEV"
   }
 ]

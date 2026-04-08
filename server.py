@@ -211,7 +211,14 @@ def register_turret():
 
         captures = _read_captures()
         turrets = captures.setdefault("turrets", {})
+
+        # Reject if a turret already exists for this star
+        for t in turrets.values():
+            if str(t.get("starId")) == star_id:
+                return jsonify({"ok": False, "reason": "turret-already-exists"}), 400
+
         token = secrets.token_hex(12)
+        url = f"/turret/{token}"
 
         turrets[token] = {
             "starId": star_id,
@@ -221,10 +228,20 @@ def register_turret():
             "lPoint": body.get("lPoint") or "",
             "assemblyId": body.get("assemblyId") or "",
             "shipRestriction": body.get("shipRestriction") or "",
+            "url": url,
             "createdAt": _time.time()
         }
         _write_captures(captures)
-        return jsonify({"ok": True, "token": token, "url": f"/turret/{token}"})
+
+        # Set star icon to filled (iconId=1) now that it has a turret
+        ownership = _read_ownership()
+        systems = ownership.setdefault("systems", {})
+        current = systems.get(star_id, [])
+        current_faction = faction if faction is not None else (current[0] if current else 0)
+        systems[star_id] = [current_faction, 1]
+        _write_ownership(ownership)
+
+        return jsonify({"ok": True, "token": token, "url": url})
     except Exception as error:
         print("[ERROR register-turret]", error)
         return jsonify({"ok": False, "reason": "error"}), 500

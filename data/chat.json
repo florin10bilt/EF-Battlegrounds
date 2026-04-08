@@ -1,20 +1,14 @@
 [
   {
     "channel": "general",
-    "sender": "ANON",
-    "text": "?/capture e3b-rqb 1",
-    "ts": 1774980665.7921069
+    "sender": "Sol",
+    "text": "Don't Forget to vote",
+    "ts": 1775682187.888
   },
   {
     "channel": "general",
     "sender": "Sol",
-    "text": "hello world",
-    "ts": 1775001882.2579317
-  },
-  {
-    "channel": "general",
-    "sender": "Sol",
-    "text": "hello world",
-    "ts": 1775002054.7948651
+    "text": "https://vote.deepsurge.xyz/?q=Frontier+Factional+Warfare#projects",
+    "ts": 1775682188.888
   }
 ]

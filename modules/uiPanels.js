@@ -987,13 +987,11 @@ export function createRightPanel({
   /* ── AUTHORIZE_TURRETS ─────────────────────────────────────────── */
   const { root: anchorRoot, body: anchorBody } = makeModule('AUTHORIZE_TURRETS', { startOpen: false });
 
-  const _TURRET_WORLD_PACKAGE = '0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75';
-  const _TURRET_CHARACTER_ID  = '0x40cd1e9802e9fb02fe3568143a368852dd1c935a629480156793d73065e9f670';
-  const _TURRET_OWNER_CAP_ID  = '0xc4020a27f34ff1beef09c3126f5857b813541e249e292f3bfc2ba004182681f1';
+  const _TURRET_WORLD_PACKAGE = '0x28b497559d65ab320d9da4613bf2498d5946b2c0ae3597ccfda3072ce127448c';
   const _SHIP_TO_PACKAGE = {
-    CORVETTES:    '0x6c4894050b04b373b00be46ec7c97d6f3fb1529a23f6489a1a06290f67492161',
-    FRIGATES:     '0x2f1d61b84d581e9eb1453876cf0a1c78496dd93f808416d290034ddc881c993b',
-    UNRESTRICTED: '0xff5e2170312abe1fb42bd7a8180196308a667459049ee590e4682e7195415f47',
+    CORVETTES:    '0x3ab018094afec13b04058124daeb323f8a767aa7423751386dd1c113a07dbb54',
+    FRIGATES:     '0x49a9bf1dbfe58c6b58616d78bed850d61b66bf139dcb6ed4dda6e0bcd1f301e5',
+    UNRESTRICTED: '0xe7a80b8ab960253625d74aa5812fdb9d712e05655d0241f5e279f57ec817a30e',
   };
 
   // Turret cache for SELECTED_SYSTEM lookup: starId (string) → turret entry
@@ -1190,7 +1188,7 @@ export function createRightPanel({
         })
       });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.reason);
+      if (!data.ok) throw new Error(data.reason === 'turret-already-exists' ? 'TURRET ALREADY REGISTERED AT THIS LOCATION' : data.reason);
 
       _lastAnchorUrl = `${window.location.origin}${data.url}`;
       anchorCopyBtn.style.display = 'block';
@@ -1205,10 +1203,46 @@ export function createRightPanel({
       const tx = new Transaction();
       tx.setSender(_walletAddress);
 
+      // Find OwnerCap<Turret> owned by the Character that controls this assembly
+      const ownerCapType = `${_TURRET_WORLD_PACKAGE}::access::OwnerCap<${_TURRET_WORLD_PACKAGE}::turret::Turret>`;
+      const [ownedRes, characterRes] = await Promise.all([
+        fetch('https://fullnode.testnet.sui.io:443', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'suix_getOwnedObjects', params: [
+            _charRecord.characterId,
+            { filter: { StructType: ownerCapType }, options: { showContent: true } },
+          ]})
+        }).then(r => r.json()),
+        fetch('https://fullnode.testnet.sui.io:443', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sui_getObject', params: [_charRecord.characterId, { showOwner: true }] })
+        }).then(r => r.json()),
+      ]);
+
+      const turretOwnerCaps = ownedRes.result?.data ?? [];
+      const matchingCap = turretOwnerCaps.find(o => {
+        const authId = o?.data?.content?.fields?.authorized_object_id;
+        return authId === assemblyId;
+      });
+      if (!matchingCap) throw new Error('NO OWNER CAP FOUND FOR THIS TURRET — ARE YOU THE OWNER?');
+
+      const ownerCapRef = {
+        objectId: matchingCap.data.objectId,
+        version: matchingCap.data.version,
+        digest: matchingCap.data.digest,
+      };
+      const characterSharedRef = {
+        objectId: _charRecord.characterId,
+        initialSharedVersion: characterRes.result.data.owner.Shared.initial_shared_version,
+        mutable: true,
+      };
+
       const [borrowedOwnerCap, receipt] = tx.moveCall({
         target: `${_TURRET_WORLD_PACKAGE}::character::borrow_owner_cap`,
         typeArguments: [`${_TURRET_WORLD_PACKAGE}::turret::Turret`],
-        arguments: [tx.object(_TURRET_CHARACTER_ID), tx.object(_TURRET_OWNER_CAP_ID)],
+        arguments: [tx.sharedObjectRef(characterSharedRef), tx.receivingRef(ownerCapRef)],
       });
 
       tx.moveCall({
@@ -1220,7 +1254,7 @@ export function createRightPanel({
       tx.moveCall({
         target: `${_TURRET_WORLD_PACKAGE}::character::return_owner_cap`,
         typeArguments: [`${_TURRET_WORLD_PACKAGE}::turret::Turret`],
-        arguments: [tx.object(_TURRET_CHARACTER_ID), borrowedOwnerCap, receipt],
+        arguments: [tx.sharedObjectRef(characterSharedRef), borrowedOwnerCap, receipt],
       });
 
       anchorStatus.textContent = 'WAITING FOR WALLET APPROVAL...';
