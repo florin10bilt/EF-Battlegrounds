@@ -1,53 +1,26 @@
 {
   "turrets": {
-    "0b5cec12b36b4adda1a9fdd9": {
-      "starId": "30016516",
-      "starName": "UGD-0KB",
-      "constellationId": 20001149,
-      "faction": 2,
-      "lPoint": "L-1543",
-      "assemblyId": "0x62bace9d1de1a967bf33e29ff1274e7458fb59da4de276f6bb79fd34961a06e4",
-      "createdAt": 1774973452.1711361
-    },
-    "412acc58c097669c873701d5": {
-      "starId": "30016454",
-      "starName": "U97-DSB",
-      "constellationId": 20001145,
-      "faction": 2,
-      "lPoint": "L4533",
-      "assemblyId": "dsadhsajklda",
-      "shipRestriction": "Frigate",
-      "createdAt": 1774977645.9467611
-    },
-    "ff08d69c0bd79112822e1509": {
-      "starId": "30016516",
-      "starName": "UGD-0KB",
-      "constellationId": 20001149,
-      "faction": 2,
-      "lPoint": "P4L4",
-      "assemblyId": "0xc237a82fba6236febcb0e3fd022909b4f6135fa723f2876e128b024614789ee6",
+    "77d20dd6e4339d7d87c64c36": {
+      "starId": "30013480",
+      "starName": "EPK-VVB",
+      "constellationId": 20000938,
+      "faction": 1,
+      "lPoint": "P1L3",
+      "assemblyId": "0xd132cbf27bb502cb0e9766a218ddc6028227e5df1a9f2f49bf3c714285697905",
       "shipRestriction": "CORVETTES",
-      "createdAt": 1774997231.6961668
+      "createdAt": 1775681054.4950602,
+      "url": "/turret/77d20dd6e4339d7d87c64c36"
     },
-    "3fc6d96b5ffaaace0dc760d6": {
-      "starId": "30016517",
-      "starName": "ILM-M4C",
+    "84b475b76ceb25516760f83b": {
+      "starId": "30016515",
+      "starName": "I3B-RQB",
       "constellationId": 20001149,
       "faction": 2,
-      "lPoint": "L4R4",
-      "assemblyId": "0xc237a82fba6236febcb0e3fd022909b4f6135fa723f2876e128b024614789ee6",
+      "lPoint": "P2L4",
+      "assemblyId": "0x9a0ba721a5eb6ba7aa282642251cd2125e759dd1b49c08510b53951340063ee0",
       "shipRestriction": "CORVETTES",
-      "createdAt": 1774997666.03187
-    },
-    "1a146bbc795f9d0a75569f53": {
-      "starId": "30016517",
-      "starName": "ILM-M4C",
-      "constellationId": 20001149,
-      "faction": 2,
-      "lPoint": "L4L5",
-      "assemblyId": "abc",
-      "shipRestriction": "CORVETTES",
-      "createdAt": 1775002236.3345504
+      "url": "/turret/84b475b76ceb25516760f83b",
+      "createdAt": 1775681916.716005
     }
   },
   "active": {}

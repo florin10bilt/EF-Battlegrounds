@@ -1,9 +1,9 @@
 const WORLD_PACKAGE =
-  '0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75';
+  '0x28b497559d65ab320d9da4613bf2498d5946b2c0ae3597ccfda3072ce127448c';
 
 const PLAYER_PROFILE_TYPE = `${WORLD_PACKAGE}::character::PlayerProfile`;
 const RPC_URL = 'https://fullnode.testnet.sui.io:443';
-const TRIBE_API_BASE = 'https://world-api-utopia.uat.pub.evefrontier.com/v2/tribes';
+const TRIBE_API_BASE = 'https://world-api-stillness.live.tech.evefrontier.com/v2/tribes';
 
 // 24 hours in seconds
 export const FACTION_COOLDOWN_SECONDS = 86400;
